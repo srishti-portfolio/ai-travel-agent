@@ -1,13 +1,11 @@
 """
-ADK agent definition + a synchronous handle_query() helper that the
-FastAPI layer can call.
+ADK agent definition + an async handle_query() helper.
 
-The agent is built once at import time. Each request reuses the same
-agent + Runner, so the MCP server subprocess is spun up once and kept
-alive for the lifetime of the container - NOT per request.
+The agent and Runner are built once at import time. The MCP server
+subprocess is started by ADK on first tool call and reused for the
+lifetime of the container.
 """
 import os
-import asyncio
 import logging
 
 from dotenv import load_dotenv
@@ -32,8 +30,7 @@ APP_NAME = "ai-travel-agent"
 DEFAULT_USER_ID = "default-user"
 
 # ---- ADK AGENT (uses MCP tools) ----
-# Use `python -m app.adk_mcp_server.server` so the path works regardless
-# of the current working directory (Docker, local dev, anywhere).
+# `python -m app.adk_mcp_server.server` works regardless of CWD.
 root_agent = LlmAgent(
   model=Gemini(model=MODEL),
   name="tourist_agent",
@@ -81,7 +78,12 @@ _runner = Runner(
 )
 
 
-async def _run_async(message: str, user_id: str, session_id: str) -> str:
+async def handle_query(
+  message: str,
+  user_id: str = DEFAULT_USER_ID,
+  session_id: str = "default-session",
+) -> str:
+  """Async entrypoint: send a message to the agent and return the final text."""
   # Ensure a session exists
   session = await _session_service.get_session(
     app_name=APP_NAME, user_id=user_id, session_id=session_id
@@ -104,17 +106,3 @@ async def _run_async(message: str, user_id: str, session_id: str) -> str:
         part.text for part in event.content.parts if part.text
       )
   return final_text or "(no response)"
-
-
-def handle_query(message: str, user_id: str = DEFAULT_USER_ID, session_id: str = "default-session") -> str:
-  """Synchronous wrapper so FastAPI route handlers can call the agent."""
-  try:
-    return asyncio.run(_run_async(message, user_id, session_id))
-  except RuntimeError:
-    # If we're already inside an event loop (rare in FastAPI sync routes),
-    # fall back to creating a new loop.
-    loop = asyncio.new_event_loop()
-    try:
-      return loop.run_until_complete(_run_async(message, user_id, session_id))
-    finally:
-      loop.close()
