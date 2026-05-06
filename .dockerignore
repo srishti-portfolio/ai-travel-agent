@@ -1,0 +1,28 @@
+# Don't leak secrets into the image
+.env
+.env.*
+
+# Python cruft
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual envs
+venv/
+.venv/
+
+# ADK runtime files (regenerated in container)
+.adk/
+*.db
+*.sqlite*
+
+# Git / IDE / OS
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# Docs (not needed in image)
+README.md
+*.md
