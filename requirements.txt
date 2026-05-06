@@ -5,4 +5,4 @@ python-dotenv==1.0.1
 requests==2.32.3
 google-adk==1.18.0
 google-genai==1.50.0
-mcp==1.4.0
+mcp==1.8.0
