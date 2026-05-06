@@ -2,12 +2,11 @@
 FastAPI entrypoint for the AI Travel Agent.
 
 Endpoints:
-- GET  /         -> health check
+- GET  /         -> info
 - GET  /healthz  -> Cloud Run health probe
 - POST /chat     -> { "message": "..." } -> agent response
 """
 import logging
-import os
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -39,7 +38,7 @@ def home():
     "service": "AI Travel Agent",
     "status": "ok",
     "endpoints": ["/chat (POST)", "/healthz (GET)"],
-}
+  }
 
 
 @app.get("/healthz")
@@ -48,12 +47,12 @@ def healthz():
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
+async def chat(req: ChatRequest):
   log.info("chat request: %s", req.message)
   try:
-    answer = handle_query(
-        req.message,
-        session_id=req.session_id or "default-session",
+    answer = await handle_query(
+      req.message,
+      session_id=req.session_id or "default-session",
     )
   except Exception as e:
     log.exception("agent failed")
