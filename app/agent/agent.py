@@ -10,6 +10,16 @@ import logging
 
 from dotenv import load_dotenv
 
+# Load .env BEFORE anything else
+load_dotenv()
+
+# Force the Gemini API path (AI Studio key), not Vertex AI.
+# We override here so ambient Windows / shell env vars can't push us to Vertex.
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "FALSE"
+# Strip any Vertex-specific vars that would otherwise be auto-detected.
+for _v in ("GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION", "GOOGLE_APPLICATION_CREDENTIALS"):
+  os.environ.pop(_v, None)
+
 from google.adk.agents import LlmAgent
 from google.adk.models import Gemini
 from google.adk.runners import Runner
@@ -21,8 +31,6 @@ from google.adk.tools.mcp_tool.mcp_toolset import (
 )
 from google.genai import types as genai_types
 
-load_dotenv()
-
 log = logging.getLogger(__name__)
 
 MODEL = os.getenv("MODEL", "gemini-2.5-flash")
@@ -30,7 +38,6 @@ APP_NAME = "ai-travel-agent"
 DEFAULT_USER_ID = "default-user"
 
 # ---- ADK AGENT (uses MCP tools) ----
-# `python -m app.adk_mcp_server.server` works regardless of CWD.
 root_agent = LlmAgent(
   model=Gemini(model=MODEL),
   name="tourist_agent",
@@ -84,7 +91,6 @@ async def handle_query(
   session_id: str = "default-session",
 ) -> str:
   """Async entrypoint: send a message to the agent and return the final text."""
-  # Ensure a session exists
   session = await _session_service.get_session(
     app_name=APP_NAME, user_id=user_id, session_id=session_id
   )
